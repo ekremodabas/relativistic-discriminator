@@ -264,7 +264,7 @@ def sampl_fid(generator, it, args, step=2000):
     generator.eval()
     with torch.no_grad():
         for i in range(0,50000, step):
-            geno = (generator(torch.randn(step,128).cuda())+1)*.5
+            geno = (generator(torch.randn(step,128,1,1).cuda())+1)*.5
             for j in range(step):
                 sys.stdout.write(f"\rsaving {i+j}/50000")
                 save_image(geno[j], f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}/{i+j}.png")
