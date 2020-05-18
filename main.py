@@ -1,11 +1,7 @@
-#!/usr/bin/python3
 import argparse
 import itertools
 from torch.utils.data import DataLoader
 import torch
-# from torchvision.utils import save_image
-# from utils import LambdaLR, weights_init_normal
-# from utils import ImageDataset
 from utils import get_model, get_loss, get_dataset, cycle, grad_penalty
 import os
 from matplotlib.pyplot import imshow, show
@@ -14,7 +10,7 @@ import sys
 import time
 import random
 
-from utils import sampl, sampl_fid
+from utils import sample_fid
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_iter', type=int, default=100000, help='total number of iterations')
@@ -24,16 +20,20 @@ parser.add_argument('--d_iter', type=int, default=1, help='the number of discrim
 parser.add_argument('--dataset', type=str, default='cifar10', help='dataset type, "cifar10" or "cat"')
 parser.add_argument('--model', type=str, default='standart_cnn', help='model, "standart_cnn" or "dcgan_64"')
 parser.add_argument('--model_type', type=str, default='sgan', help='model type, "sgan", "rsgan", "rasgan", "lsgan", "ralsgan", "hingegan", "rahingegan", "wgan-gp", "rsgan-gp" or "rasgan-gp"')
-parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
+parser.add_argument('--lr', type=float, default=0.0002, help='learning rate for discriminator and generator')
 parser.add_argument('--beta1', type=float, default=0.5, help='adam beta1')
 parser.add_argument('--beta2', type=float, default=0.999, help='adam beta2')
 parser.add_argument('--lambd', type=int, default=10, help='gradient penalty lambda')
 parser.add_argument('--n_workers', type=int, default=4, help='number of cpu threads for data loader')
 parser.add_argument('--info', type=str, default = '', help = 'information about training')
-parser.add_argument('--spec_norm', type=bool, default=False, help = 'spectral normalization for discriminator')
-parser.add_argument('--no_BN', type=bool, default=False, help = 'no batchnorm')
-parser.add_argument('--all_tanh', type=bool, default=False, help = 'tanh for all activations')
+parser.add_argument('--spec_norm', type=bool, default=False, help = 'spectral normalization for the critic')
+parser.add_argument('--no_BN', type=bool, default=False, help = 'no batchnorm for any of the models')
+parser.add_argument('--all_tanh', type=bool, default=False, help = 'use tanh for all activations of the models')
 parser.add_argument('--fid_iter', type=int, default=100000, help='number of cpu threads for data loader')
+parser.add_argument('--create_log', type=int, default=50, help = 'to create a log file, give the iteration frequency as int (set 0 if you do not want a log file)')
+parser.add_argument('--print_log', type=int, default=1000, help = 'to print time and losses, give the iteration frequency as int (set 0 if you do not want to print anything)')
+parser.add_argument('--save_model', type=int, default=100000, help = 'to save the models, give the iteration frequency as int (set 0 if you do not want to save the model)')
+# parser.add_argument('--fid_sample', type=int, default=50000, help='number of cpu threads for data loader')
 
 
 args = parser.parse_args()
@@ -47,6 +47,7 @@ if(args.seed):
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+
     torch.cuda.manual_seed_all(args.seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
@@ -73,7 +74,11 @@ average = args.model_type in ["rasgan", "ralsgan", "rahingegan", "rasgan-gp"]
 
 dataset = get_dataset(args.dataset)
 
-losses = open(f"losses/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}.txt", "a+")
+args.fid_sample = len(dataset)
+
+
+if(args.create_log):
+    losses = open(f"losses/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}.txt", "a+")
 
 # is shuffle false?
 dataloader = DataLoader(dataset=dataset, batch_size=args.batch_size ,shuffle=True,  num_workers=args.n_workers)
@@ -85,7 +90,8 @@ loader_iter = iter(cycle(dataloader, args.dataset))
 
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # sample_noise = torch.randn(10,128).cuda()
-st_time = time.time()
+print_time = time.time()
+start_time = time.time()
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
@@ -102,9 +108,6 @@ for i in range(0,args.n_iter):#, args.batch_size):
         fake = Generator(noise).detach()
         
         loss_args_D = [Discriminator(real), Discriminator(fake)]
-        
-#         print(loss_args_D[0].size())
-#         print("a")
         
         if(average):
 
@@ -147,25 +150,23 @@ for i in range(0,args.n_iter):#, args.batch_size):
     loss_G.backward()
 
     optimizer_G.step()
-
     
-#     if(i % 4096 == 0):
-#         sampl(sample_noise, Generator, i)
-    
-    
-    if(i%50 == 0):
-        losses.write(f"{i}/{args.n_iter} loss_D {loss_D:.4f} loss_G {loss_G:.4f}\n")
-    if(i%1000 == 0 ):
-        print(f"time {time.time()-st_time} s {i}")
-        st_time= time.time()
-
+    if(args.create_log and (i+1)%args.create_log == 0):
+        losses.write(f"{i}/{args.n_iter} loss_D {loss_D.item():.6f} loss_G {loss_G.item():.6f}\n")
+    if(args.print_log and (i+1)%args.print_log == 0 ):
+        print(f"iter[{i+1}/{args.n_iter}] loss_D {loss_D.item():3f} loss_G {loss_G.item():.3f} {time.time()-print_time} s passed since the last print")
+        print_time = time.time()
+    if((i+1) % args.save_model == 0):
+        torch.save(Generator.state_dict(), f"models/gen_{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}.pth")
+        torch.save(Discriminator.state_dict(), f"models/disc_{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}.pth")
     if((i+1) % args.fid_iter == 0):
-        
-        s_time = time.time()        
-        sampl_fid(Generator, i,args)
-        print(f"sampling took {time.time()-s_time} s {i}")
-        
-losses.close()
-        
+        s_time = time.time()
+        sample_fid(Generator, i, args)
+        if(args.print_log):
+            print(f"sampling took {time.time()-s_time} s {i}")
 
-
+if(args.create_log):
+    losses.close()
+if(args.print_log):
+    end_time = time.time()
+    print(f"Total training time {(end_time-start_time)//60} minutes {((end_time-start_time)%60):.1f} seconds")
