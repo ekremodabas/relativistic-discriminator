@@ -258,16 +258,24 @@ def sampl(noise, Gen, iter):
         plt.show(block=False)
 #         fig.savefig(f"im/{iter}.png", dpi=200)
 
-def sampl_fid(generator, it, args, step=2000):
+def sample_fid(generator, it, args, step=500):
     
-    os.makedirs(f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}")
+    #os.makedirs(f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}")
     generator.eval()
     with torch.no_grad():
-        for i in range(0,50000, step):
-            geno = (generator(torch.randn(step,128,1,1).cuda())+1)*.5
-            for j in range(step):
-                sys.stdout.write(f"\rsaving {i+j}/50000")
-                save_image(geno[j], f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}/{i+j}.png")
+        for i in range(0,args.fid_sample, step):
+            sys.stdout.write(f"\rsaving {i}/{args.fid_sample}")
+            if(args.fid_sample < step+i):
+                step = args.fid_sample-i
+            geno = (generator(torch.randn(step,128,1,1).cuda())+1)*127.5 
+            if(i == 0):
+                arr = np.round_(geno.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)
+            else:
+                arr = np.concatenate((arr, np.round_(geno.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)), axis=0)
+            
+            #for j in range(step):
+                #save_image(geno[j], f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}/{i+j}.png")
+        np.savez_compressed(f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}", images=arr)
     generator.train()
         
         
