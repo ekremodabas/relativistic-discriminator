@@ -28,10 +28,10 @@ def conv_block(in_channels, out_channels, kernel_size, stride, padding=1, bias=T
 
 
 
-class StandartCNN_Generator(nn.Module):
+class StandardCNN_Generator(nn.Module):
 
     def __init__(self, no_BN=False, all_tanh=False):
-        super(StandartCNN_Generator, self).__init__()
+        super(StandardCNN_Generator, self).__init__()
 
         self.linear = nn.Sequential(nn.Flatten(), nn.Linear(128, 512*4*4))
 
@@ -58,10 +58,10 @@ class StandartCNN_Generator(nn.Module):
 
 
 
-class StandartCNN_Discriminator(nn.Module):
+class StandardCNN_Discriminator(nn.Module):
 
-    def __init__(self, no_BN, all_tanh, spec_norm=True):
-        super(StandartCNN_Discriminator, self).__init__()
+    def __init__(self, no_BN=False, all_tanh=False, spec_norm=True):
+        super(StandardCNN_Discriminator, self).__init__()
 
 
         self.model = nn.Sequential( *conv_block(in_channels=3, out_channels=64, stride=1, no_BN=no_BN,
@@ -131,7 +131,7 @@ class DCGAN_64_Generator(nn.Module):
 
 class DCGAN_64_Discriminator(nn.Module):
 
-    def __init__(self, no_BN, all_tanh, spec_norm=False):
+    def __init__(self, no_BN=False, all_tanh=False, spec_norm=False):
         super(DCGAN_64_Discriminator, self).__init__()
 
 
