@@ -296,13 +296,34 @@ def sample_fid(generator, it, args, step=500):
 
         The number of samples going to be generated is equal to the number of images in the training set. (args.fid_sample)
         
+<<<<<<< HEAD
         "step" is the batch size for the samples to be generated.
 
     """
 
+=======
+        fig=plt.figure(figsize=(5,3))
+        columns = 5
+        rows = 2
+        for i in range(1, 6):
+            img = (out[i-1].permute(1,2,0).cpu()+1)*0.5
+            fig.add_subplot(rows, columns, i)
+            plt.imshow(img)
+        for i in range(6, 11):
+            img = (out[i-1].permute(1,2,0).cpu()+1)*0.5
+            fig.add_subplot(rows, columns, i)
+            plt.imshow(img)
+        plt.show(block=False)
+#         fig.savefig(f"im/{iter}.png", dpi=200)
+
+def sample_fid(generator, it, args, step=500):
+    
+    #os.makedirs(f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}")
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
     generator.eval()
 
     with torch.no_grad():
+<<<<<<< HEAD
 
         for i in range(0,args.fid_sample, step):
 
@@ -324,3 +345,22 @@ def sample_fid(generator, it, args, step=500):
     generator.train()
 
 
+=======
+        for i in range(0,args.fid_sample, step):
+            sys.stdout.write(f"\rsaving {i}/{args.fid_sample}")
+            if(args.fid_sample < step+i):
+                step = args.fid_sample-i
+            geno = (generator(torch.randn(step,128,1,1).cuda())+1)*127.5 
+            if(i == 0):
+                arr = np.round_(geno.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)
+            else:
+                arr = np.concatenate((arr, np.round_(geno.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)), axis=0)
+            
+            #for j in range(step):
+                #save_image(geno[j], f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}/{i+j}.png")
+        np.savez_compressed(f"fid/samplez/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}", images=arr)
+    generator.train()
+        
+        
+        
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96

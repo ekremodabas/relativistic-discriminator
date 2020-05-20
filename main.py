@@ -1,11 +1,7 @@
-#!/usr/bin/python3
 import argparse
 import itertools
 from torch.utils.data import DataLoader
 import torch
-# from torchvision.utils import save_image
-# from utils import LambdaLR, weights_init_normal
-# from utils import ImageDataset
 from utils import get_model, get_loss, get_dataset, cycle, grad_penalty
 import os
 from matplotlib.pyplot import imshow, show
@@ -14,9 +10,36 @@ import sys
 import time
 import random
 
+<<<<<<< HEAD
 from utils import sample_fid, is_negative
 
 parser = argparse.ArgumentParser()
+=======
+from utils import sample_fid
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--n_iter', type=int, default=100000, help='total number of iterations')
+parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
+parser.add_argument('--seed', type=int, default=1, help='default seed for torch, use -1 to train with random seed')
+parser.add_argument('--d_iter', type=int, default=1, help='the number of discriminator updates before updating the generator')
+parser.add_argument('--dataset', type=str, default='cifar10', help='dataset type, "cifar10" or "cat"')
+parser.add_argument('--model', type=str, default='standart_cnn', help='model, "standart_cnn" or "dcgan_64"')
+parser.add_argument('--model_type', type=str, default='sgan', help='model type, "sgan", "rsgan", "rasgan", "lsgan", "ralsgan", "hingegan", "rahingegan", "wgan-gp", "rsgan-gp" or "rasgan-gp"')
+parser.add_argument('--lr', type=float, default=0.0002, help='learning rate for discriminator and generator')
+parser.add_argument('--beta1', type=float, default=0.5, help='adam beta1')
+parser.add_argument('--beta2', type=float, default=0.999, help='adam beta2')
+parser.add_argument('--lambd', type=int, default=10, help='gradient penalty lambda')
+parser.add_argument('--n_workers', type=int, default=4, help='number of cpu threads for data loader')
+parser.add_argument('--info', type=str, default = '', help = 'information about training')
+parser.add_argument('--spec_norm', type=bool, default=False, help = 'spectral normalization for the critic')
+parser.add_argument('--no_BN', type=bool, default=False, help = 'no batchnorm for any of the models')
+parser.add_argument('--all_tanh', type=bool, default=False, help = 'use tanh for all activations of the models')
+parser.add_argument('--fid_iter', type=int, default=100000, help='number of cpu threads for data loader')
+parser.add_argument('--create_log', type=int, default=50, help = 'to create a log file, give the iteration frequency as int (set 0 if you do not want a log file)')
+parser.add_argument('--print_log', type=int, default=1000, help = 'to print time and losses, give the iteration frequency as int (set 0 if you do not want to print anything)')
+parser.add_argument('--save_model', type=int, default=100000, help = 'to save the models, give the iteration frequency as int (set 0 if you do not want to save the model)')
+# parser.add_argument('--fid_sample', type=int, default=50000, help='number of cpu threads for data loader')
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
 
 parser.add_argument('--total_iter', type=int, default=100000, help='total number of iterations to train the generator')
 parser.add_argument('--batch_size', type=int, default=64, help='size of the batches')
@@ -77,6 +100,13 @@ if(args.seed):  # use a pre-determined seed for numpy, random and torch if args.
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+<<<<<<< HEAD
+=======
+
+    torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
 
     if(args.cuda):
         torch.cuda.manual_seed_all(args.seed)
@@ -104,6 +134,14 @@ relativistic = args.loss_type in ["rsgan", "rasgan", "ralsgan", "rahingegan", "r
 average = args.loss_type in ["rasgan", "ralsgan", "rahingegan", "rasgan-gp"]
 
 
+<<<<<<< HEAD
+=======
+args.fid_sample = len(dataset)
+
+
+if(args.create_log):
+    losses = open(f"losses/{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}.txt", "a+")
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
 
 
 # get dataset (cifar10 or cat)
@@ -113,6 +151,14 @@ dataset = get_dataset(args.dataset)
 if(args.fid_iter):  # setting the number of samples that is going to be generated to the number of images in the training dataset
     args.fid_sample = len(dataset)    
 
+<<<<<<< HEAD
+=======
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# sample_noise = torch.randn(10,128).cuda()
+print_time = time.time()
+start_time = time.time()
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
 
 dataloader = DataLoader(dataset=dataset, batch_size=args.batch_size ,shuffle=True,  num_workers=args.n_workers)
 
@@ -139,6 +185,12 @@ for i in range(args.total_iter):
 
         loss_args_D = [Discriminator(real), Discriminator(fake)] # default discriminator loss parameters for every loss type
         
+<<<<<<< HEAD
+=======
+        loss_args_D = [Discriminator(real), Discriminator(fake)]
+        
+        if(average):
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
 
         if(average):  # averages of the discriminator outputs if the loss type is relativistic average
             
@@ -186,6 +238,7 @@ for i in range(args.total_iter):
     loss_G.backward()
 
     optimizer_G.step()
+<<<<<<< HEAD
 
     
     if(args.log_iter and (i+1) % args.log_iter == 0):    # update log file
@@ -222,3 +275,25 @@ if(args.print_iter):
 
     end_time = time.time()
     print(f"Total training time {(end_time-start_time)//60} minutes {((end_time-start_time)%60):.1f} seconds")
+=======
+    
+    if(args.create_log and (i+1)%args.create_log == 0):
+        losses.write(f"{i}/{args.n_iter} loss_D {loss_D.item():.6f} loss_G {loss_G.item():.6f}\n")
+    if(args.print_log and (i+1)%args.print_log == 0 ):
+        print(f"iter[{i+1}/{args.n_iter}] loss_D {loss_D.item():3f} loss_G {loss_G.item():.3f} {time.time()-print_time} s passed since the last print")
+        print_time = time.time()
+    if((i+1) % args.save_model == 0):
+        torch.save(Generator.state_dict(), f"models/gen_{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}.pth")
+        torch.save(Discriminator.state_dict(), f"models/disc_{args.dataset}_{args.model_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}.pth")
+    if((i+1) % args.fid_iter == 0):
+        s_time = time.time()
+        sample_fid(Generator, i, args)
+        if(args.print_log):
+            print(f"sampling took {time.time()-s_time} s {i}")
+
+if(args.create_log):
+    losses.close()
+if(args.print_log):
+    end_time = time.time()
+    print(f"Total training time {(end_time-start_time)//60} minutes {((end_time-start_time)%60):.1f} seconds")
+>>>>>>> fd508a7a5a399aa47c016528d4e0322b5ad19a96
