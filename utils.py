@@ -290,13 +290,11 @@ def is_negative(value):
     return int(value)
 
 
-def sample_fid(generator, it, args, step=500):
+def sample_fid(generator, it, args, batch_size=500):
     """
     Generates samples to be used for calculating FID and saves them as a compressed numpy array.
 
         The number of samples going to be generated is equal to the number of images in the training set. (args.fid_sample)
-        
-        "step" is the batch size for the samples to be generated.
 
     """
 
@@ -304,15 +302,15 @@ def sample_fid(generator, it, args, step=500):
 
     with torch.no_grad():
 
-        for i in range(0,args.fid_sample, step):
+        for i in range(0,args.fid_sample, batch_size):
 
             if(args.print_iter):
                 sys.stdout.write(f"\rsaving {i}/{args.fid_sample}")
 
-            if(args.fid_sample < step+i):
-                step = args.fid_sample-i
+            if(args.fid_sample < batch_size+i):
+                batch_size = args.fid_sample-i
 
-            generated_samples = (generator(torch.randn(size=(step,128,1,1), device=generator.device))+1)*127.5 
+            generated_samples = (generator(torch.randn(size=(batch_size,128,1,1), device=generator.device))+1)*127.5 
 
             if(i == 0):
                 arr = np.round_(generated_samples.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)
