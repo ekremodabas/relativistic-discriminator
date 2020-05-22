@@ -317,7 +317,7 @@ def sample_fid(generator, it, args, batch_size=500):
             else:
                 arr = np.concatenate((arr, np.round_(generated_samples.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)), axis=0)
             
-        np.savez_compressed(f"samples/{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}", images=arr)
+        np.savez_compressed(f"samples/{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_betas{args.beta1}_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{it+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else ""), images=arr)
 
     generator.train()
 
