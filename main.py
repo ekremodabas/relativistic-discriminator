@@ -1,16 +1,11 @@
 import argparse
-import itertools
 from torch.utils.data import DataLoader
 import torch
-from utils import get_model, get_loss, get_dataset, cycle, grad_penalty
+from utils import get_model, get_loss, get_dataset, cycle, grad_penalty, sample_fid, is_negative
 import os
-from matplotlib.pyplot import imshow, show
 import numpy as np
-import sys
 import time
 import random
-
-from utils import sample_fid, is_negative
 
 parser = argparse.ArgumentParser()
 
