@@ -58,7 +58,7 @@ def get_model(args):
     """
     #  
 
-    if(args.model == "standart_cnn"):
+    if(args.model == "standard_cnn"):
 
         return (StandardCNN_Generator(no_BN = args.no_BN, all_tanh=args.all_tanh).to(args.device), 
                 StandardCNN_Discriminator(no_BN = args.no_BN, all_tanh=args.all_tanh, spec_norm = args.spec_norm).to(args.device))
