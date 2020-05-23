@@ -54,7 +54,7 @@ os.makedirs("datasets", exist_ok=True)
 # create folders if needed
 if(args.log_iter):
     os.makedirs("losses", exist_ok=True)
-    losses = open(f"losses/{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_betas_{args.beta1}_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".txt", "a+")
+    losses = open(f"losses/{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b1_{args.beta1}_b2_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".txt", "a+")
 
 if(args.save_model):
     os.makedirs("models", exist_ok=True)
@@ -69,7 +69,6 @@ if(args.seed):  # use a pre-determined seed for numpy, random and torch if args.
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if(args.cuda):
         torch.cuda.manual_seed_all(args.seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = True
@@ -194,8 +193,8 @@ for i in range(args.total_iter):
     
     if(args.save_model and (i+1) % args.save_model == 0):
 
-        torch.save(Generator.state_dict(), f"models/gen_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_betas_{args.beta1}_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
-        #torch.save(Discriminator.state_dict(), f"models/disc_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_betas_{args.beta1}_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
+        torch.save(Generator.state_dict(), f"models/gen_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b1_{args.beta1}_b2_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
+        #torch.save(Discriminator.state_dict(), f"models/disc_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b1_{args.beta1}_b2_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
 
         
     if(args.fid_iter and (i+1) % args.fid_iter == 0):   # generate samples for calculating Frechet Inception Distance
