@@ -3,6 +3,8 @@ import numpy as np
 from IPython.display import display
 from argparse import ArgumentParser
 import os
+from subprocess import call
+
 
 download_dict = {
     "cat_lsgan.tar.gz":   "https://drive.google.com/uc?id=1oTzTFQvcf1vXjCkh8HGK0lGbaNkS7-vo&export=download",
@@ -150,6 +152,9 @@ def reproduce_results(experiment, part, use_pretrained):
                     model_text = "_n_d_1_b1_0.5_b2_0.999_b_size_64"
 
                 else:
+                    args.d_iter = 5
+                    args.beta2 = 0.9
+                    args.lr = 0.0001
                     model_text = "_n_d_5_b1_0.5_b2_0.9_b_size_64"
 
                 for key in download_dict.keys():
@@ -170,7 +175,9 @@ def reproduce_results(experiment, part, use_pretrained):
 
                 print(f"Creating samples for {exp}")
 
-                sample_fid(Generator, 100000, args)
+                sample_name = the_key[:-3]+"npz"
+
+                sample_fid(Generator, 99999, args)
 
                 print(f"Calculating the FID between the generated samples and the real samples...")
 
@@ -187,6 +194,8 @@ def reproduce_results(experiment, part, use_pretrained):
 
             training_script.write("#!/usr/bin/env bash\n")
 
+            samples = []
+
             for exp in cifar10_ids[part]:
 
                 exp_split = exp.split(" ")
@@ -197,17 +206,20 @@ def reproduce_results(experiment, part, use_pretrained):
 
                 if(exp_type == 1):
 
+                    samples.append(f"cifar10_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_64_lr_0.0002_100000.npz")
                     training_script.write(f"python main.py --loss_type {loss.lower()} --batch_size 64 --spec_norm True\n")
 
                 else:
+
+                    samples.append(f"cifar10_{loss.lower()}_n_d_5_b1_0.5_b2_0.9_b_size_64_lr_0.0001_100000.npz")
                     training_script.write(f"python main.py --loss_type {loss.lower()} --batch_size 64 --spec_norm True --lr 0.0001 --beta2 0.9 --d_iter 5\n")
 
                 
             print(f"Starting training the models.")
 
-            # run the script
+            run("./reproduce_cifar10.sh")
 
-            # run the fid calculator
+            # run the fid calculator | samples
 
             print(f"Calculated the FID, re-run the read_calculations to see the result.")
 
@@ -274,7 +286,6 @@ def reproduce_results(experiment, part, use_pretrained):
                 cats_tar.close()
                 print("Extraction is completed.")
 
-#python main.py --loss_type rasgan-gp   --batch_size 64 --dataset cat  --model dcgan_64 --fid_iter 10000 --save_model 10000
                 Generator, _ = get_model(args)
 
                 for it in range(20000,100001,10000):
@@ -282,6 +293,8 @@ def reproduce_results(experiment, part, use_pretrained):
                     Generator.load_state_dict(torch.load(os.path.join("models", f"cat_{loss.lower()}", f"gen_cat_{loss.lower()}_n_d_1_b_size_64_lr_0.0002_{it}.pth"), map_location=args.device))
 
                     print(f"Creating samples for {exp} {it}/100000")
+
+                    sample = f"cat_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_64_lr_0.0002_{it}.npz"
 
                     sample_fid(Generator, it-1, args)
 
@@ -299,17 +312,23 @@ def reproduce_results(experiment, part, use_pretrained):
 
             training_script.write("#!/usr/bin/env bash\n")
 
+            samples = []
+
             for exp in cat_ids[part]:
 
                 exp_split = exp.split(" ")
 
                 loss = exp_split[0]
 
+                for it in range(20000,100001,10000):
+
+                    samples.append(f"cat_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_64_lr_0.0002_{it}.npz")
+
                 training_script.write(f"python main.py --loss_type {loss.lower()} --batch_size 64 --dataset cat --model dcgan_64 --fid_iter 10000 --save_model 10000")
             
             print(f"Starting training the models.")
 
-            # run the script
+            run("./reproduce_cat.sh")
 
             # run the fid calculator
 
@@ -362,10 +381,13 @@ def reproduce_results(experiment, part, use_pretrained):
                 if(exp_type == 'lr'):
 
                     model_text = "_n_d_1_b1_0.5_b2_0.999_b_size_32_lr_0.001"
+                    args.lr = 0.001
 
                 elif(exp_type == 'Beta'):
 
                     model_text = "_n_d_1_b1_0.9_b2_0.9_b_size_32_"
+                    args.beta1=0.9
+                    args.beta2=0.9
                     
                 elif(exp_type == 'Remove'):
 
@@ -395,6 +417,8 @@ def reproduce_results(experiment, part, use_pretrained):
 
                 print(f"Creating samples for {exp}")
 
+                sample = the_key[:-3]+"npz"
+
                 sample_fid(Generator, 100000, args)
 
                 print(f"Calculating the FID between the generated samples and the real samples...")
@@ -411,6 +435,8 @@ def reproduce_results(experiment, part, use_pretrained):
 
             training_script.write("#!/usr/bin/env bash\n")
 
+            samples = []
+
             for exp in unstable_ids[part]:
 
                 exp_split = exp.split(" ")
@@ -423,25 +449,33 @@ def reproduce_results(experiment, part, use_pretrained):
 
                 if(exp_type == 'lr'):
 
+                    samples.append(f"cifar10_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_32_lr_0.001_100000.npz")
+
                     training_script.write("--lr 0.001\n")
 
                 elif(exp_type == 'Beta'):
+
+                    samples.append(f"cifar10_{loss.lower()}_n_d_1_b1_0.9_b2_0.9_b_size_32_lr_0.0002_100000.npz")
 
                     training_script.write("--beta1 0.9 --beta2 0.9\n")
                     
                 elif(exp_type == 'Remove'):
 
+                    samples.append(f"cifar10_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_32_lr_0.0002_100000_noBN.npz")
+
                     training_script.write("--no_BN True\n")
 
                 elif(exp_type == 'All'):
+
+                    samples.append(f"cifar10_{loss.lower()}_n_d_1_b1_0.5_b2_0.999_b_size_32_lr_0.0002_100000_alltanh.npz")
 
                     training_script.write("--all_tanh True\n")
 
             print(f"Starting training the models.")
 
-            # run the script
+            run("./reproduce_unstable.sh")
 
-            # run the fid calculator
+            # run the fid calculator | samples
 
             print(f"Calculated the FID, re-run the read_calculations to see the result.")
 
