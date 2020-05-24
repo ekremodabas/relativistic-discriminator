@@ -343,7 +343,7 @@ def extract_statistics(path, model, batch_size, use_cuda, verbose = False):
     remainder = len(images) % batch_size
         
     # Get the number of batches
-    number_of_batches = (len(images) // batch_size) + 1
+    number_of_batches = len(images) // batch_size
 
     # Define the array of feature vectors
     features = np.empty(shape = (len(images), 2048))
@@ -380,14 +380,17 @@ def extract_statistics(path, model, batch_size, use_cuda, verbose = False):
 
     # If the numnber of samples is not a multiple of batch size, handle remanining examples.
     if remainder != 0:
+        i += 1 
         # reshape and rescale 
-        batch = (images[i * batch_size:].astype(np.float32).transpose(0, 3, 1, 2)) / 255
+        batch = images[i * batch_size:].astype(np.float32)
+        batch = batch.transpose(0, 3, 1, 2)
+        batch /= 255
         
         # convert to tensor
-        batch = torch.from_numpy(batch_size).type(torch.FloatTensor)
+        batch = torch.from_numpy(batch).type(torch.FloatTensor)
         if use_cuda:
             batch = batch.cuda()
-            
+
         # process and save
         batch = nn.functional.adaptive_avg_pool2d(model(batch), output_size = (1,1))
         batch = batch.cpu().data.numpy().reshape(remainder, 2048)
@@ -433,7 +436,7 @@ def frechet_distance(mu1, mu2, sigma1, sigma2):
         np.trace(sigma2) - 2 * np.trace(sqrt_of_prod))
 
 
-def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = False):
+def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = False, model_path = "models/inception_v3.pt"):
     """
     Calculates the FID scores between the sets of samples saved in npz format under the given paths. The calculated scores
     will be saved to a file named fids.txt in the same directory.  
@@ -441,7 +444,9 @@ def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = Fa
             sample_path1: Path for the first set of samples. 
             sample_path2: Path for the second set of samples. 
             batch_size: Batch size for FID computation, note that the number of samples should be a multiple of batch_size. 
-            use_cuda: cuda device will be used if set to True.
+            use_cuda: Boolean variable, cuda device will be used if set to True.
+            verbose: Boolean variable, progress will be shown if set to True. 
+            model_path: Path to a saved instance of models.InceptionV3, has default value: models/inception_v3.pt
         
     Note that FID between two sets of samples is symmetric, therefore sample_path1 and sample_path2 may be swapped without
     any effect on the resulting score. 
@@ -454,10 +459,21 @@ def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = Fa
         raise RuntimeError("Invalid path passed to calculate_fid!")
     
     if (not sample_path1.endswith(".npz")) or (not sample_path2.endswith(".npz")):
-        raise RuntimeError("Invalid sample file type! The samples should be saved as .npz files.")
+        raise RuntimeError("Invalid file type! Samples or statistics should be saved as .npz files.")
+    
+    # create a models folder if one does not exist
+    if not os.path.exists("models/"): 
+        os.mkdir("models")
 
-    inception_v3 = InceptionV3(verbose = verbose)
-
+    # check if inception_v3 is saved, if so just load
+    if (os.path.exists(model_path)):
+        inception_v3 = torch.load(model_path)
+    
+    # otherwise create a new object and save it
+    else:
+        inception_v3 = InceptionV3(verbose = verbose)
+        torch.save(inception_v3, model_path)
+        
     if use_cuda: 
         inception_v3.cuda()
     
