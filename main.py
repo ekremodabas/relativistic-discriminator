@@ -10,7 +10,7 @@ import random
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--total_iter', type=int, default=100000, help='total number of iterations to train the generator')
-parser.add_argument('--batch_size', type=int, default=64, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
 parser.add_argument('--seed', type=int, default=1, help='default seed for torch, numpy and random; (set 0 to train with a random seed)')
 parser.add_argument('--d_iter', type=int, default=1, help='the number of iterations to train the discriminator before training the generator')
 parser.add_argument('--dataset', type=str, default='cifar10', help='dataset type, "cifar10" or "cat"')
