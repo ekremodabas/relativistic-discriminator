@@ -1,4 +1,4 @@
-from models import DCGAN_64_Discriminator, DCGAN_64_Generator, StandardCNN_Discriminator, StandardCNN_Generator
+from models import DCGAN_64_Discriminator, DCGAN_64_Generator, StandardCNN_Discriminator, StandardCNN_Generator, InceptionV3
 from torch.utils.data import Dataset as dst
 from glob import glob
 import torch
@@ -17,6 +17,11 @@ from PIL import Image
 from argparse import ArgumentTypeError
 import tarfile
 import urllib
+from scipy import linalg
+try: 
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x): return x
 
 class Dataset(dst):
 
@@ -29,11 +34,11 @@ class Dataset(dst):
             cats_64_url = "https://drive.google.com/uc?id=19vLd3nuT3amuW4xlN7kTXoSYqWZlRRqx&export=download"
             urllib.request.urlretrieve(cats_64_url, os.path.join("datasets", "cats.tar.gz"))
 
-            print("Cat dataset is downloaded, now starting extracting the file.")
+            print("Cat dataset is downloaded, extracting...")
             cats_tar = tarfile.open(os.path.join("datasets", "cats.tar.gz"))
             cats_tar.extractall("datasets") 
             cats_tar.close()
-            print("Extraction is completed.")
+            print("Extraction successful!")
 
         self.files = sorted(glob(root + '/*.png')) + sorted(glob(root + '/*.jpg'))
 
@@ -52,19 +57,16 @@ class Dataset(dst):
 def get_model(args):  
     """
     Returns the generator and discriminator models for the given model architecture and parameters such as no_BN, all_tanh and spec_norm.
-
         StandardCNN is the architecture described in the appendices I.1 of the paper, and DCGAN_64 is in appendices I.2.
         
     """
     #  
 
     if(args.model == "standard_cnn"):
-
         return (StandardCNN_Generator(no_BN = args.no_BN, all_tanh=args.all_tanh).to(args.device), 
                 StandardCNN_Discriminator(no_BN = args.no_BN, all_tanh=args.all_tanh, spec_norm = args.spec_norm).to(args.device))
 
     if(args.model == "dcgan_64"):
-
         return (DCGAN_64_Generator(no_BN = args.no_BN, all_tanh=args.all_tanh).to(args.device), 
                 DCGAN_64_Discriminator(no_BN = args.no_BN, all_tanh=args.all_tanh, spec_norm = args.spec_norm).to(args.device))
 
@@ -72,16 +74,11 @@ def get_model(args):
 def get_loss(loss_type):
     """
     Returns the generator and discriminator losses for the given loss type.
-
         Relativistic generator losses uses discriminator output for the real samples.
-
         Relativistic average losses uses the average of discriminator outputs for both real and fake samples.
-
         Pre-calculated gradient penalty term is added to the discriminator losses using gradient penalty.
-
     """
      
-
     if(loss_type == "sgan"):
 
         loss = nn.BCEWithLogitsLoss()
@@ -226,9 +223,7 @@ def get_loss(loss_type):
 def grad_penalty(discriminator, x_hat, Lambda):
     """ 
     Calculates gradient penalty given the interpolated input x_hat.
-
     Lambda is the gradient penalty coefficient.
-
     """
 
     x_hat.requires_grad_(True)
@@ -294,7 +289,7 @@ def sample_fid(generator, it, args, batch_size=500):
     """
     Generates samples to be used for calculating FID and saves them as a compressed numpy array.
 
-        The number of samples going to be generated is equal to the number of images in the training set. (args.fid_sample)
+        The number of samples to be generated is equal to the number of images in the training set (args.fid_sample).
 
     """
 
@@ -322,3 +317,152 @@ def sample_fid(generator, it, args, batch_size=500):
     generator.train()
 
 
+def extract_statistics(path, model, batch_size, use_cuda, verbose = False):
+    """
+        Computes and returns the mean and covariance matrix of the InceptionV3 features of the image dataset at the given path. 
+        Arguments: 
+            path: Dataset path. 
+            model: The model for feature extraction (should be instance of models.InceptionV3)
+            batch_size: Batch size to be used for feature extraction. 
+            use_cuda: Boolean variable, use CUDA if True.
+            verbose: Boolean variable, display progress if True.
+        Return Values: 
+            mu: Mean of the extracted features. 
+            sigma: Covariance matrix of the extracted features. 
+    """
+    model.eval()
+    
+    # Load the data. 
+    images = np.load(path)["images"]
+
+    # Check for possible errors due to batch size \ number of samples
+    if batch_size > len(images):
+        print("Warning: Batch size larger than number of samples when computing FIDs!") 
+        batch_size = len(images)
+    
+    elif len(images) % batch_size != 0: 
+        print("Warning: Batch size is not a multiple of number of samples when computing FIDs! Some samples will not be used.")
+        
+    # Get the number of batches
+    number_of_batches = len(images) // batch_size
+
+    # Define the array of feature vectors
+    features = np.empty(shape = (len(images), 2048))
+    if verbose:
+        print("Computing InceptionV3 activations...")
+
+    for i in tqdm(range(number_of_batches)) if verbose else range(number_of_batches):
+        
+        # Get current batch
+        batch = images[i * batch_size:(i + 1) * batch_size].astype(np.float32)
+
+        # Reshape to (N, C, H, W)
+        batch = batch.transpose(0, 3, 1, 2)
+
+        # Scale down to [0, 1]
+        batch /= 255
+
+        # Convert batch to Tensor and load it to the selected device
+        batch = torch.from_numpy(batch).type(torch.FloatTensor)
+
+        if use_cuda:
+            batch = batch.cuda()
+
+        # Compute InceptionV3 features
+        batch_of_features = model(batch)
+
+        # Apply adaptive avg pooling to decrease number of features from 
+        # 8 x 8 x 2048 to 1 x 1 x 2048 as per instructions from the original paper
+        batch_of_features = nn.functional.adaptive_avg_pool2d(batch_of_features, output_size = (1,1))
+
+        # Append batch of features to the feature list (after removing unnecessary dimensions).
+        batch_of_features = batch_of_features.cpu().data.numpy().reshape(batch_size, 2048)
+        features[i * batch_size:(i+1) * batch_size] = batch_of_features
+
+    if verbose: 
+        print("InceptionV3 activations computed succesfully!")
+
+    # Compute feature statistics
+    mu = np.mean(features, axis = 0)
+    sigma = np.cov(features, rowvar = False)
+
+    return mu, sigma
+
+
+def frechet_distance(mu1, mu2, sigma1, sigma2):
+    """
+        Computes and returns the frechet distance between the distributions represented by (mu1, sigma1) and (m2, sigma2). 
+        Arguments: 
+            mu1: The mean of distribution 1 (1-D numpy array).
+            mu2: The mean of distribution 2 (1-D numpy array).
+            sigma1: Covariance matrix of distribution 1 (2-D numpy array). 
+            sigma2: Covariance matrix of distribution 2 (2-D numpy array). 
+        Return Value: 
+            frechet_distance: Frechet distance between the two distributions. 
+                 
+    """
+    difference = mu1 - mu2
+    difference_squared = difference.dot(difference)
+
+    sqrt_of_prod, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
+
+    # Check for singularities
+    if not np.isfinite(sqrt_of_prod).all():
+        epsilon = np.eye(sigma1.shape[0]) * 1e-6
+        sqrt_of_prod = linalg.sqrtm((sigma1 + epsilon).dot(sigma2 + epsilon))
+
+    # Check for possible complex objects
+    if np.iscomplexobj(sqrt_of_prod):
+        sqrt_of_prod = sqrt_of_prod.real
+
+    return (difference_squared + np.trace(sigma1) +
+        np.trace(sigma2) - 2 * np.trace(sqrt_of_prod))
+
+
+def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = False):
+    """
+    Calculates the FID scores between the sets of samples saved in npz format under the given paths. The calculated scores
+    will be saved to a file named fids.txt in the same directory.  
+        Arguments: 
+            sample_path1: Path for the first set of samples. 
+            sample_path2: Path for the second set of samples. 
+            batch_size: Batch size for FID computation, note that the number of samples should be a multiple of batch_size. 
+            use_cuda: cuda device will be used if set to True.
+        
+    Note that FID between two sets of samples is symmetric, therefore sample_path1 and sample_path2 may be swapped without
+    any effect on the resulting score. 
+        
+        Return Value: 
+            fid_score: The (scalar) FID score between the samples in sample_path1 and sample_path2.
+    """
+
+    if (not os.path.exists(sample_path1)) or (not os.path.exists(sample_path2)):
+        raise RuntimeError("Invalid path passed to calculate_fid!")
+    
+    if (not sample_path1.endswith(".npz")) or (not sample_path2.endswith(".npz")):
+        raise RuntimeError("Invalid sample file type! The samples should be saved as .npz files.")
+
+    inception_v3 = InceptionV3(verbose = verbose)
+
+    if use_cuda: 
+        inception_v3.cuda()
+    
+    mu1, sigma1 = extract_statistics(path = sample_path1,
+                                    model = inception_v3, 
+                                    batch_size = batch_size, 
+                                    use_cuda = use_cuda,
+                                    verbose = verbose)
+
+    mu2, sigma2 = extract_statistics(path = sample_path2, 
+                                    model = inception_v3, 
+                                    batch_size = batch_size,
+                                    use_cuda = use_cuda, 
+                                    verbose = verbose)
+
+    fid_score = frechet_distance(mu1, mu2, sigma1, sigma2)
+
+    f = open("fids.txt", "a+")
+    f.write(f"The FID score between {sample_path1} and {sample_path2} is: {fid_score}")
+    f.close()
+
+    return fid_score
