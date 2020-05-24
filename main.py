@@ -26,10 +26,10 @@ parser.add_argument('--all_tanh', type=bool, default=False, help = 'use tanh for
 parser.add_argument('--lambd', type=int, default=10, help='coefficient for gradient penalty')
 parser.add_argument('--n_workers', type=int, default=4, help='number of cpu threads to be used in data loader')
 
-parser.add_argument('--fid_iter', type=is_negative, default=0, help='iteration frequency for generating samples using generator for FID (set 0 to not generate)')
+parser.add_argument('--fid_iter', type=is_negative, default=100000, help='iteration frequency for generating samples using generator for FID (set 0 to not generate)')
 parser.add_argument('--log_iter', type=is_negative, default=0, help = 'iteration frequency for updating the log file (set 0 to not create a log file)')
 parser.add_argument('--print_iter', type=is_negative, default=1000, help = 'iteration frequency for printing losses and time passed (set 0 to not print)')
-parser.add_argument('--save_model', type=is_negative, default=0, help = 'iteration frequency for saving the models (set 0 to not save)')
+parser.add_argument('--save_model', type=is_negative, default=100000, help = 'iteration frequency for saving the models (set 0 to not save)')
 
 args = parser.parse_args()
 
