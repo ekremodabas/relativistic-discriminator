@@ -191,13 +191,13 @@ for i in range(args.total_iter):
         print_time = time.time()
 
     
-    if(args.save_model and (i+1) % args.save_model == 0):
+    if(args.save_model and (i+1) % args.save_model == 0 and (i+1) != 10000):
 
         torch.save(Generator.state_dict(), f"models/gen_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b1_{args.beta1}_b2_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
         #torch.save(Discriminator.state_dict(), f"models/disc_{args.dataset}_{args.loss_type}_n_d_{args.d_iter}_b1_{args.beta1}_b2_{args.beta2}_b_size_{args.batch_size}_lr_{args.lr}_{i+1}" +  ( "_noBN" if args.no_BN else "") + ("_alltanh" if args.all_tanh else "") + ".pth")
 
         
-    if(args.fid_iter and (i+1) % args.fid_iter == 0):   # generate samples for calculating Frechet Inception Distance
+    if(args.fid_iter and (i+1) % args.fid_iter == 0 and (i+1) != 10000):   # generate samples for calculating Frechet Inception Distance
 
         sampling_time = time.time()
 
