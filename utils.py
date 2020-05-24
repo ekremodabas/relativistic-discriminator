@@ -310,7 +310,7 @@ def sample_fid(generator, it, args, batch_size=500):
             if(args.fid_sample < batch_size+i):
                 batch_size = args.fid_sample-i
 
-            generated_samples = (generator(torch.randn(size=(batch_size,128,1,1), device=generator.device))+1)*127.5 
+            generated_samples = (generator(torch.randn(size=(batch_size,128,1,1), device=args.device))+1)*127.5 
 
             if(i == 0):
                 arr = np.round_(generated_samples.cpu().permute(0,2,3,1).numpy()).astype(np.uint8)
