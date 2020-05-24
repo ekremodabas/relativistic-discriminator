@@ -340,11 +340,10 @@ def extract_statistics(path, model, batch_size, use_cuda, verbose = False):
         print("Warning: Batch size larger than number of samples when computing FIDs!") 
         batch_size = len(images)
     
-    elif len(images) % batch_size != 0: 
-        print("Warning: Batch size is not a multiple of number of samples when computing FIDs! Some samples will not be used.")
+    remainder = len(images) % batch_size
         
     # Get the number of batches
-    number_of_batches = len(images) // batch_size
+    number_of_batches = (len(images) // batch_size) + 1
 
     # Define the array of feature vectors
     features = np.empty(shape = (len(images), 2048))
@@ -377,7 +376,22 @@ def extract_statistics(path, model, batch_size, use_cuda, verbose = False):
 
         # Append batch of features to the feature list (after removing unnecessary dimensions).
         batch_of_features = batch_of_features.cpu().data.numpy().reshape(batch_size, 2048)
-        features[i * batch_size:(i+1) * batch_size] = batch_of_features
+        features[i * batch_size:(i+1) * batch_size] = batch_of_features        
+
+    # If the numnber of samples is not a multiple of batch size, handle remanining examples.
+    if remainder != 0:
+        # reshape and rescale 
+        batch = (images[i * batch_size:].astype(np.float32).transpose(0, 3, 1, 2)) / 255
+        
+        # convert to tensor
+        batch = torch.from_numpy(batch_size).type(torch.FloatTensor)
+        if use_cuda:
+            batch = batch.cuda()
+            
+        # process and save
+        batch = nn.functional.adaptive_avg_pool2d(model(batch), output_size = (1,1))
+        batch = batch.cpu().data.numpy().reshape(remainder, 2048)
+        features[i * batch_size:] = batch
 
     if verbose: 
         print("InceptionV3 activations computed succesfully!")
