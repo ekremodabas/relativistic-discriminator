@@ -14,7 +14,7 @@ parser.add_argument('--batch_size', type=int, default=64, help='size of the batc
 parser.add_argument('--seed', type=int, default=1, help='default seed for torch, numpy and random; (set 0 to train with a random seed)')
 parser.add_argument('--d_iter', type=int, default=1, help='the number of iterations to train the discriminator before training the generator')
 parser.add_argument('--dataset', type=str, default='cifar10', help='dataset type, "cifar10" or "cat"')
-parser.add_argument('--model', type=str, default='standart_cnn', help='model architecture, "standard_cnn" or "dcgan_64"')
+parser.add_argument('--model', type=str, default='standard_cnn', help='model architecture, "standard_cnn" or "dcgan_64"')
 parser.add_argument('--loss_type', type=str, default='sgan', help='loss type, "sgan", "rsgan", "rasgan", "lsgan", "ralsgan", "hingegan", "rahingegan", "wgan-gp", "rsgan-gp" or "rasgan-gp"')
 parser.add_argument('--cuda', type=bool, default=True, help = 'gpu training')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate for the discriminator and the generator')
