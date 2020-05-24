@@ -285,7 +285,7 @@ def is_negative(value):
     return int(value)
 
 
-def sample_fid(generator, it, args, batch_size=500):
+def sample_fid(generator, it, args, batch_size=100):
     """
     Generates samples to be used for calculating FID and saves them as a compressed numpy array.
 
@@ -299,8 +299,7 @@ def sample_fid(generator, it, args, batch_size=500):
 
         for i in range(0,args.fid_sample, batch_size):
 
-            if(args.print_iter):
-                sys.stdout.write(f"\rsaving {i}/{args.fid_sample}")
+            sys.stdout.write(f"\rGenerating {i}/{args.fid_sample}")
 
             if(args.fid_sample < batch_size+i):
                 batch_size = args.fid_sample-i
@@ -436,7 +435,7 @@ def frechet_distance(mu1, mu2, sigma1, sigma2):
         np.trace(sigma2) - 2 * np.trace(sqrt_of_prod))
 
 
-def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = False, model_path = "models/inception_v3.pt"):
+def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = True, model_path = "models/inception_v3.pt"):
     """
     Calculates the FID scores between the sets of samples saved in npz format under the given paths. The calculated scores
     will be saved to a file named fids.txt in the same directory.  
@@ -468,20 +467,27 @@ def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = Fa
     # check if inception_v3 is saved, if so just load
     if (os.path.exists(model_path)):
         inception_v3 = torch.load(model_path)
+        print(f"InceptionV3 model is loaded from {model_path}.")
     
     # otherwise create a new object and save it
     else:
+        print(f"InceptionV3 model will be created and saved to {model_path}.")
         inception_v3 = InceptionV3(verbose = verbose)
         torch.save(inception_v3, model_path)
         
     if use_cuda: 
         inception_v3.cuda()
-    
-    mu1, sigma1 = extract_statistics(path = sample_path1,
-                                    model = inception_v3, 
-                                    batch_size = batch_size, 
-                                    use_cuda = use_cuda,
-                                    verbose = verbose)
+        
+    if(os.path.basename(os.path.normpath(sample_path1)).startswith("stats")):
+        stat_file = np.load(sample_path1)
+        mu1, sigma1 = stat_file['mu'], stat_file['sigma']
+        
+    else:
+        mu1, sigma1 = extract_statistics(path = sample_path1,
+                                        model = inception_v3, 
+                                        batch_size = batch_size, 
+                                        use_cuda = use_cuda,
+                                        verbose = verbose)
 
     mu2, sigma2 = extract_statistics(path = sample_path2, 
                                     model = inception_v3, 
@@ -492,7 +498,7 @@ def calculate_fid(sample_path1, sample_path2, batch_size, use_cuda, verbose = Fa
     fid_score = frechet_distance(mu1, mu2, sigma1, sigma2)
 
     f = open("fids.txt", "a+")
-    f.write(f"The FID score between {sample_path1} and {sample_path2} is: {fid_score}")
+    f.write(f"{os.path.basename(os.path.normpath(sample_path2))} FID {fid_score}\n")
     f.close()
 
     return fid_score
