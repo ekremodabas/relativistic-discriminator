@@ -74,8 +74,8 @@ def get_model(args):
 def get_loss(loss_type):
     """
     Returns the generator and discriminator losses for the given loss type.
-        Relativistic generator losses uses discriminator output for the real samples.
-        Relativistic average losses uses the average of discriminator outputs for both real and fake samples.
+        Relativistic generator losses use discriminator output for the real samples.
+        Relativistic average losses use the average of discriminator outputs for both real and fake samples.
         Pre-calculated gradient penalty term is added to the discriminator losses using gradient penalty.
     """
      
