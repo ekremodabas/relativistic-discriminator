@@ -745,7 +745,7 @@ def create_markdown_cifar(fid_dict, precision=3):
     return markdown
 
 def create_markdown_cat(fid_dict, precision=3):
-    markdown = r'|<span style="font-weight:normal">Loss Type</span>|<span style="font-weight:normal">Minimum FID</span>|<span style="font-weight:normal">Maximum FID</span>|<span style="font-weight:normal">Mean of FIDs</span>|<span style="font-weight:normal">SD of FIDs</span>|' + "\n"
+    markdown = r'|<span style="font-weight:normal">Loss Type</span>|<span style="font-weight:normal">Minimum FID</span>|<span style="font-weight:normal">Maximum FID</span>|<span style="font-weight:normal">Mean of FIDs</span>|<span style="font-weight:normal">StDev of FIDs</span>|' + "\n"
     markdown += r"|:-:|:-:|:-:|:-:|:-:|" + "\n"
     mins, maxs, devs, means = [], [], [], []
     for key in fid_dict.keys():
